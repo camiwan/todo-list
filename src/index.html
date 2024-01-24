@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./output.css">
+  <title>Cadastrar Tarefa</title>
+</head>
+<body class="bg-gray-900 px-4 py-4 m-2">
+
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl text-center font-bold mb-4 bg-gray-500 uppercase">Cadastrar Tarefa</h1>
+  
+    <div class="flex justify-center bg-gray-700">
+
+ 
+      <!-- Formulário para Adicionar Tarefas -->
+      <form id="addTaskForm" class="mb-4">
+        <label for="taskName" class="block text-4xl font-bold font-medium text-white px-4 py-2 p-4">Tarefa:
+          <input type="text" id="taskName" name="taskName" class=" text-4xl bg-gray-900 text-orange-800 rounded-none p-2">
+        </label>
+      
+        <label for="timer" class="block text-4xl font-bold font-medium text-white px-4 py-2">Timer:
+        
+          <input type="text" id="timer" name="timer" class=" text-center font-mono bg-gray-900 rounded-none text-orange-800 text-5xl p-2 max-w-xs " readonly>
+        
+      </label>
+      
+        <div class="flex mt-4">
+          <div class="flex justify-center px-4 py-4 gap-2">
+       
+            <button type="button" id="startTimer" class=" text-2xl  bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition duration-300">
+              Iniciar
+            </button>
+            <button type="button" id="stopTimer" class=" text-2xl bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition duration-300">
+              Pausar 
+            </button>
+            <button type="button" id="clearTimer" class=" text-2xl bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition duration-300">
+              Limpar
+            </button>
+          </div>
+
+          
+
+        </div>
+        <label for="completed" class="block text-4xl font-bold font-medium text-white px-4 py-2 m-2">Tarefa concluída:
+          <input type="checkbox" id="completed" name="completed" class=" px-5 py-5 m-2">
+         </label>
+      <div class="flex justify-end px-4 py-4">
+
+        <button type="submit" id="addTaskBtn" class=" text-2xl mt-4 bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-gray-800 p-12 transition duration-300">
+          Cadastrar
+        </button>
+
+      </div>
+      </form>
+
+      
+            
+    </div>
+    <!-- <div id="success-message" class="overflow h-32 bg-green-500 text-white p-2 rounded-md mb-4"></div> -->
+    <!-- Lista de Tarefas -->
+    <h1 class=" text-white text-3xl text-center font-bold mb-4 uppercase m-4">Lista de Tarefas</h1>
+    <div class="justify-end mx-auto p-4 w-6/12" id="tasks-list" class="mb-4"></div>
+    
+    <!-- Script para Listar e Adicionar Tarefas -->
+    <script>
+
+window.addTask = (taskData) => {
+    fetch('http://localhost:3000/api/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(taskData),
+    })
+    .then(response => response.json())
+    .then(data => {
+      const successMessage = document.getElementById('success-message');
+
+      if (data.success) {
+        // Se a tarefa foi adicionada com sucesso
+        alert('Tarefa adicionada com sucesso!');
+        // successMessage.textContent = 'Tarefa adicionada com sucesso!';
+        // successMessage.classList.remove('hidden');
+        listTasks(); // Atualize a lista de tarefas, se necessário
+      } else {
+        // Se houve um erro ao adicionar a tarefa
+        successMessage.textContent = 'Erro ao adicionar tarefa: ' + data.message;
+        successMessage.classList.remove('hidden');
+      }
+    })
+    .catch(error => {
+      console.error('Erro ao adicionar tarefa:', error);
+      alert('Erro ao adicionar tarefa. Consulte o console para mais informações.');
+    });
+  };
+
+      window.listTasks = async () => {
+        try {
+          const response = await fetch('http://localhost:3000/api/tasks');
+          const tasks = await response.json();
+    
+          const tasksListContainer = document.getElementById('tasks-list');
+          tasksListContainer.innerHTML = '';
+    
+          tasks.forEach((task) => {
+            const taskItem = document.createElement('div');
+            taskItem.className = 'mb-2 p-2 border rounded-md bg-white';
+            taskItem.innerHTML = `
+              <p>${task.id}</p>
+              <strong>${task.task_name}</strong>
+              <p>Concluída: ${task.completed ? 'Sim' : 'Não'}</p>
+              <p>Timer: ${task.timer}</p>
+              
+                 <button type="button" class=" bg-red-700 text-white px-4 py-2 rounded-md hover:bg-red-500 transition duration-300" onclick="deleteTask(${task.id})">Excluir</button>
+              
+            `;
+            tasksListContainer.appendChild(taskItem);
+          });
+        } catch (error) {
+          console.error('Erro ao obter tarefas:', error);
+        }
+      };
+
+      window.deleteTask = (taskId) => {
+
+        fetch(`http://localhost:3000/api/tasks/${taskId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        .then(response => {
+          if (response.ok) {
+            console.log('Tarefa excluída com sucesso!');
+            listTasks();
+          } else {
+            console.error('Erro ao excluir tarefa:', response.statusText);
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao excluir tarefa:', error);
+        });
+      };
+    
+      document.addEventListener('DOMContentLoaded', () => {
+
+        let timerInterval;
+        let seconds = 0;
+
+         // Função para adicionar tarefa
+        // const addTask = async (taskData) => {
+        //   try {
+        //     const response = await fetch('http://localhost:3000/api/tasks', {
+        //       method: 'POST',
+        //       headers: {
+        //         'Content-Type': 'application/json',
+        //       },
+        //       body: JSON.stringify(taskData),
+        //     });
+
+        //     if (response.ok) {
+        //       const sucessMessage = document.getElementById('success-message');
+
+        //       sucessMessage.textContent = 'Tarefa adicionada com sucesso!'
+        //       sucessMessage.classList.remove('hidden');
+
+        //       console.log('Tarefa adicionada com sucesso!');
+              
+        //       listTasks(); // Atualizar a lista após adicionar uma nova tarefa
+        //     } else {
+        //       console.error('Erro ao adicionar tarefa:', response.statusText);
+        //       alert(response.statusText);
+        //     }
+        //   } catch (error) {
+        //     console.error('Erro ao adicionar tarefa:', error);
+        //   }
+        // };
+
+      document.getElementById('startTimer').addEventListener('click', () => {
+          timerInterval = setInterval(() => {
+            seconds++;
+            document.getElementById('timer').value = formatTimer(seconds);
+          }, 1000);
+        });
+
+        document.getElementById('stopTimer').addEventListener('click', () => {
+          clearInterval(timerInterval);
+        });
+
+        document.getElementById('clearTimer').addEventListener('click', () => {
+          clearInterval(timerInterval);
+          seconds = 0;
+          document.getElementById('timer').value = '';
+        });
+
+        // Lógica do botão para cadastrar tarefa
+        document.getElementById('addTaskBtn').addEventListener('click', () => {
+          const taskData = {
+            task_name: document.getElementById('taskName').value,
+            completed: document.getElementById('completed').checked,
+            timer: formatTimer(seconds),
+          };
+          addTask(taskData); // Chamar a função para adicionar tarefa
+          document.getElementById('taskName').value = ''; // Limpar o campo do formulário após adicionar
+          document.getElementById('completed').checked = false; // Desmarcar a checkbox
+          document.getElementById('timer').value = ''; // Limpar o campo do timer
+          clearInterval(timerInterval); // Limpar o cronômetro após adicionar a tarefa
+          seconds = 0;
+        });
+
+        // Função para formatar o tempo no formato hh:mm:ss
+        const formatTimer = (seconds) => {
+          const hours = Math.floor(seconds / 3600);
+          const minutes = Math.floor((seconds % 3600) / 60);
+          const remainingSeconds = seconds % 60;
+          return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        };
+
+        listTasks();
+    });
+    </script>
+   
+  </div>
+
+</body>
+</html>
